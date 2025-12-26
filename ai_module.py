@@ -17,10 +17,6 @@ def ask_gemini(prompt: str, model: str = "gemini-2.5-flash") -> str:
         response = client.models.generate_content_stream(
             model=model,
             contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=300,  # This limits the size of the AI's reply
-            ),
         )
         result = ""
         for chunk in response:
