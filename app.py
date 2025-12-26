@@ -196,7 +196,6 @@ def ask_ai():
         # --- TOKEN REDUCTION: Concise System Instruction ---
         full_prompt = f"""
         System: You are a concise study assistant. Answer in under 150 words.
-        Context: {tasks_context}
         User Question: {prompt}
         """
 
