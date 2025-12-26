@@ -178,27 +178,28 @@ def delete_task(task_id):
 def ask_ai():
     prompt = request.form.get("prompt", "")
     if prompt:
-        # 1. Fetch the user's tasks from the database
-        tasks = get_all_tasks()  # This helper function already exists in your app.py
+        tasks = get_all_tasks()
 
-        # 2. Format the tasks into a readable string for the AI
-        if tasks:
-            tasks_context = "Here are my current tasks:\n"
-            for t in tasks:
-                tasks_context += f"- {t['subject']}: {t['description']} (Due: {t['due_date']}, Status: {t['status']}, Priority: {t['priority']})\n"
+        # --- TOKEN REDUCTION: Pruning context ---
+        # Only take the 10 most recent/relevant tasks and only essential fields
+        short_tasks = tasks[:10]
+        if short_tasks:
+            tasks_context = "Current Tasks:\n"
+            for t in short_tasks:
+                # Removed 'description' and 'priority' to save tokens unless strictly needed
+                tasks_context += (
+                    f"- {t['subject']} (Due: {t['due_date']}, Status: {t['status']})\n"
+                )
         else:
-            tasks_context = "I currently have no tasks in my list."
+            tasks_context = "No tasks found."
 
-        # 3. Create a combined prompt with the context and the user's question
+        # --- TOKEN REDUCTION: Concise System Instruction ---
         full_prompt = f"""
-        You are a helpful study assistant. Use the user's task list below to answer their questions if relevant.
-        
-        {tasks_context}
-        
+        System: You are a concise study assistant. Answer in under 150 words.
+        Context: {tasks_context}
         User Question: {prompt}
         """
 
-        # 4. Send the combined prompt to Gemini
         response = ask_gemini(full_prompt)
         return jsonify({"response": response})
 
@@ -241,19 +242,21 @@ def generate_flashcards():
     subject = data.get("subject")
     topic = data.get("topic")
 
+    # --- TOKEN REDUCTION: Explicitly limit output size in the prompt ---
     prompt = f"""
-    Generate 5 educational flashcards for the subject '{subject}' on the topic '{topic}'.
-    Return the response ONLY as a JSON array of objects. 
-    Each object must have "front" and "back" keys.
-    Example format: [[{{"front": "Question", "back": "Answer"}}] ]
+    Generate 5 short flashcards for {subject}: {topic}.
+    Keep 'front' and 'back' text under 20 words each.
+    Return ONLY a JSON array. 
+    Format: [{{"front": "Q", "back": "A"}}]
     """
     try:
         ai_response = ask_gemini(prompt)
+        # Standard cleaning logic remains the same
         clean_json = ai_response.replace("```json", "").replace("```", "").strip()
         cards = json.loads(clean_json)
         return jsonify({"cards": cards})
     except Exception as e:
-        print("AI Error: {e}")
+        print(f"AI Error: {e}")  # Fixed the print string formatting here too
         return jsonify({"error": "Failed to generate cards"}), 500
 
 
